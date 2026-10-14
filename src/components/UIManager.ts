@@ -13,12 +13,22 @@ export class UIManager {
       warnings: false,
     });
 
+    this.ensureTerminalDimensions();
     this.setupGlobalKeybindings();
     this.setupResizeHandler();
   }
 
   public getScreen(): blessed.Widgets.Screen {
     return this.screen;
+  }
+
+  private ensureTerminalDimensions(): void {
+    if (Number(this.screen.width) <= 1 || Number(this.screen.height) <= 1) {
+      const cols = process.stdout.columns && process.stdout.columns > 20 ? process.stdout.columns : 120;
+      const rows = process.stdout.rows && process.stdout.rows > 10 ? process.stdout.rows : 34;
+      this.screen.program.cols = cols;
+      this.screen.program.rows = rows;
+    }
   }
 
   private setupGlobalKeybindings(): void {
@@ -30,6 +40,10 @@ export class UIManager {
 
   private setupResizeHandler(): void {
     this.screen.on('resize', () => {
+      if (process.stdout.columns && process.stdout.rows) {
+        this.screen.program.cols = process.stdout.columns;
+        this.screen.program.rows = process.stdout.rows;
+      }
       this.render();
     });
   }
