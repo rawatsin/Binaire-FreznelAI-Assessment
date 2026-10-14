@@ -1,0 +1,32 @@
+{
+  "name": "binaire-freznelai-assessment",
+  "version": "1.0.0",
+  "description": "Terminal-based system task and sensor information viewer",
+  "main": "dist/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts",
+    "check": "tsx src/index.ts --check",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "cli",
+    "system-monitor",
+    "blessed",
+    "sensors"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "neo-blessed": "^0.2.0",
+    "systeminformation": "^5.33.15"
+  },
+  "devDependencies": {
+    "@types/blessed": "^0.1.27",
+    "@types/node": "^22.13.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
