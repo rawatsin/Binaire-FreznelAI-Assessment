@@ -10,6 +10,24 @@ export class ProcessService {
   private sortField: SortField = 'cpu';
   private sortAsc = false;
 
+  private static readonly CRITICAL_PIDS = new Set<number>([0, 4]);
+  private static readonly CRITICAL_NAMES = new Set<string>([
+    'system',
+    'system idle process',
+    'smss.exe',
+    'csrss.exe',
+    'wininit.exe',
+    'services.exe',
+    'lsass.exe',
+    'lsaiso.exe',
+    'fontdrvhost.exe',
+    'winlogon.exe',
+    'svchost.exe',
+    'init',
+    'systemd',
+    'kthreadd',
+  ]);
+
   public async getProcesses(): Promise<ProcessItem[]> {
     const rawProcesses = await si.processes();
     let list: ProcessItem[] = rawProcesses.list.map((proc) => ({
@@ -64,6 +82,10 @@ export class ProcessService {
     this.filterQuery = query.trim();
   }
 
+  public getFilterQuery(): string {
+    return this.filterQuery;
+  }
+
   public setSorting(field: SortField, ascending?: boolean): void {
     this.sortField = field;
     if (ascending !== undefined) {
@@ -73,11 +95,38 @@ export class ProcessService {
     }
   }
 
+  public cycleSortField(): SortField {
+    const fields: SortField[] = ['cpu', 'mem', 'pid', 'name', 'user'];
+    const currentIndex = fields.indexOf(this.sortField);
+    const nextIndex = (currentIndex + 1) % fields.length;
+    this.sortField = fields[nextIndex] || 'cpu';
+    return this.sortField;
+  }
+
+  public toggleSortDirection(): boolean {
+    this.sortAsc = !this.sortAsc;
+    return this.sortAsc;
+  }
+
   public getSortConfig(): { field: SortField; ascending: boolean } {
     return { field: this.sortField, ascending: this.sortAsc };
   }
 
-  public async terminateProcess(pid: number): Promise<{ success: boolean; message: string }> {
+  public isCriticalProcess(pid: number, name?: string): boolean {
+    if (pid === process.pid) return true;
+    if (ProcessService.CRITICAL_PIDS.has(pid)) return true;
+    if (name && ProcessService.CRITICAL_NAMES.has(name.toLowerCase())) return true;
+    return false;
+  }
+
+  public async terminateProcess(pid: number, name?: string): Promise<{ success: boolean; message: string }> {
+    if (this.isCriticalProcess(pid, name)) {
+      return {
+        success: false,
+        message: `Refused: PID ${pid} (${name || 'unknown'}) is a critical system process or current app.`,
+      };
+    }
+
     return new Promise((resolve) => {
       const isWindows = os.platform() === 'win32';
       const command = isWindows ? `taskkill /PID ${pid} /F` : `kill -9 ${pid}`;

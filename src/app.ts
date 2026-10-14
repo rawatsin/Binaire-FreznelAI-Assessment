@@ -47,7 +47,9 @@ export class App {
     this.uiManager = new UIManager('Binaire FreznelAI - System Tasks & Sensors Viewer');
     const screen = this.uiManager.getScreen();
 
-    this.dashboardView = new DashboardView(screen, this.metricsService);
+    this.dashboardView = new DashboardView(screen, this.metricsService, this.processService);
+    this.uiManager.setExitPredicate(() => !this.dashboardView?.getDialogManager().isOpen());
+
     await this.dashboardView.start();
 
     // Hook cleanup to exit

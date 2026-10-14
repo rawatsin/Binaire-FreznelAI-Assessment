@@ -11,6 +11,7 @@ export interface PanelBounds {
 export abstract class BasePanel {
   protected container: blessed.Widgets.BoxElement;
   protected screen: blessed.Widgets.Screen;
+  protected focused = false;
 
   constructor(screen: blessed.Widgets.Screen, bounds: PanelBounds, title: string) {
     this.screen = screen;
@@ -27,11 +28,6 @@ export abstract class BasePanel {
       style: {
         border: {
           fg: '#1e3d59',
-        },
-        focus: {
-          border: {
-            fg: 'cyan',
-          },
         },
       },
       label: ` ${title} `,
@@ -53,6 +49,15 @@ export abstract class BasePanel {
     if (this.container.style.border) {
       this.container.style.border.fg = color;
     }
+  }
+
+  public setFocused(isFocused: boolean): void {
+    this.focused = isFocused;
+    this.setBorderColor(isFocused ? 'cyan' : '#1e3d59');
+  }
+
+  public isFocused(): boolean {
+    return this.focused;
   }
 
   public abstract update(snapshot: SystemSnapshotModel): void;

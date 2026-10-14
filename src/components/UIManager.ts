@@ -3,6 +3,7 @@ import blessed from 'neo-blessed';
 export class UIManager {
   private screen: blessed.Widgets.Screen;
   private isDestroyed = false;
+  private exitPredicate?: () => boolean;
 
   constructor(title = 'Binaire FreznelAI - System Tasks & Sensors Viewer') {
     this.screen = blessed.screen({
@@ -22,6 +23,10 @@ export class UIManager {
     return this.screen;
   }
 
+  public setExitPredicate(predicate: () => boolean): void {
+    this.exitPredicate = predicate;
+  }
+
   private ensureTerminalDimensions(): void {
     if (Number(this.screen.width) <= 1 || Number(this.screen.height) <= 1) {
       const cols = process.stdout.columns && process.stdout.columns > 20 ? process.stdout.columns : 120;
@@ -32,9 +37,18 @@ export class UIManager {
   }
 
   private setupGlobalKeybindings(): void {
-    this.screen.key(['q', 'C-c'], () => {
+    // Ctrl+C always interrupts and exits
+    this.screen.key(['C-c'], () => {
       this.destroy();
       process.exit(0);
+    });
+
+    // 'q' only exits when allowed by predicate (e.g. not typing in filter input)
+    this.screen.key(['q'], () => {
+      if (!this.exitPredicate || this.exitPredicate()) {
+        this.destroy();
+        process.exit(0);
+      }
     });
   }
 
