@@ -1,9 +1,10 @@
 import { SystemMetricsService } from './api/SystemMetricsService';
 import { ProcessService } from './api/ProcessService';
-import { RebaseAuthService } from './auth/RebaseAuthService';
-import { IAuthService } from './auth/IAuthService';
+import { FirebaseAuthService } from './auth/FirebaseAuthService';
+import { IAuthService, UserSession } from './auth/IAuthService';
 import { UIManager } from './components/UIManager';
 import { DashboardView } from './components/DashboardView';
+import { AuthView } from './components/AuthView';
 
 export class App {
   private metricsService: SystemMetricsService;
@@ -11,11 +12,12 @@ export class App {
   private authService: IAuthService;
   private uiManager?: UIManager;
   private dashboardView?: DashboardView;
+  private authView?: AuthView;
 
-  constructor() {
+  constructor(authService?: IAuthService) {
     this.processService = new ProcessService();
     this.metricsService = new SystemMetricsService(this.processService);
-    this.authService = new RebaseAuthService();
+    this.authService = authService || new FirebaseAuthService();
   }
 
   public getMetricsService(): SystemMetricsService {
@@ -47,14 +49,27 @@ export class App {
     this.uiManager = new UIManager('Binaire FreznelAI - System Tasks & Sensors Viewer');
     const screen = this.uiManager.getScreen();
 
-    this.dashboardView = new DashboardView(screen, this.metricsService, this.processService);
-    this.uiManager.setExitPredicate(() => !this.dashboardView?.getDialogManager().isOpen());
+    // Check if authenticated
+    if (this.authService.isAuthenticated()) {
+      await this.launchDashboard();
+    } else {
+      this.authView = new AuthView(screen, this.authService, async (_session: UserSession) => {
+        await this.launchDashboard();
+      });
+    }
 
-    await this.dashboardView.start();
-
-    // Hook cleanup to exit
     screen.on('destroy', () => {
       this.dashboardView?.stop();
+      this.authView?.destroy();
     });
+  }
+
+  private async launchDashboard(): Promise<void> {
+    if (!this.uiManager) return;
+    const screen = this.uiManager.getScreen();
+
+    this.dashboardView = new DashboardView(screen, this.metricsService, this.processService);
+    this.uiManager.setExitPredicate(() => !this.dashboardView?.getDialogManager().isOpen());
+    await this.dashboardView.start();
   }
 }
